@@ -1,28 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:abastecimiento/providers/HttpBase.dart';
 
-/* class CalificarAbastecimiento extends StatefulWidget {
-  @override
-  _CalificarAbastecimientoState createState() =>
-      _CalificarAbastecimientoState();
-} */
-
-//class _CalificarAbastecimientoState extends State<CalificarAbastecimiento> {
-
-class CalificarAbastecimientoState extends StatelessWidget {
+class CalficacionStart extends StatelessWidget {
   int _iconState = 0;
   List<Widget> _list = [];
   HttpBase http = new HttpBase();
-  final  id;
+  final id;
 
-  CalificarAbastecimientoState({@required this.id});
+  CalficacionStart({@required this.id});
 
   @override
   Widget build(BuildContext context) {
     _list = [];
-    Map<String, dynamic> data = ModalRoute.of(context).settings.arguments;
-    print('carga');
-    print(data);
     for (int i = 1; i <= 5; i++) {
       _list.add(
         IconButton(
@@ -32,10 +21,8 @@ class CalificarAbastecimientoState extends StatelessWidget {
             color: _iconState >= i ? Color(0xFFF8B500) : Colors.black,
           ),
           onPressed: () {
-            print('cantidad $i');
-           /*  setState(() { */
-              _iconState = i;
-            /* }); */
+            (context as Element).markNeedsBuild();
+            _iconState = i;
           },
         ),
       );
@@ -88,8 +75,16 @@ class CalificarAbastecimientoState extends StatelessWidget {
               child: RaisedButton(
                 color: Color(0xFFF8B500),
                 onPressed: () {
-                  //  http.postApi('store/raiting/', {})
-                  Navigator.pop(context);
+                  http.postApi('store/raiting/', {
+                    'store_id': this.id,
+                    'raiting': _iconState
+                  })
+                  .then((onValue){
+                    print(onValue.body);
+                  })
+                  .whenComplete(() {
+                    Navigator.pop(context);
+                  });
                 },
                 child: Text(
                   'Confirmar',

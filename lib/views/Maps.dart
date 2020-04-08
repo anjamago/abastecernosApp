@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong/latlong.dart';
 import 'package:location/location.dart';
-import 'package:abastecimiento/widgets/CalificarAbastecimiento.dart';
+//import 'package:abastecimiento/widgets/CalificarAbastecimiento.dart';
+import 'package:abastecimiento/widgets/CalficacionStart.dart';
+import 'package:abastecimiento/providers/HttpBase.dart';
 
 class Maps extends StatefulWidget {
   Maps({Key key}) : super(key: key);
@@ -21,63 +24,49 @@ class _MapsState extends State<Maps> {
   Map<String, double> userLocation;
   String tipoMapa = 'streets';
   var centerLocation;
+  HttpBase http = new HttpBase();
+  List<Marker> _marker;
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    loaderService();
+    Timer timer = new Timer(
+        new Duration(seconds: 5),
+        () {
+          loaderService();
+        },
+      );
+  }
 
   @override
   Widget build(BuildContext context) {
+    //loaderService();
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Color(0xFFF8B500),
-        title: Text(
-          'Mi direcion',
-          style: TextStyle(color: Colors.white),
-        ),
-        leading: Icon(
-          Icons.menu,
-          color: Colors.white,
-        ),
-        actions: <Widget>[
-          IconButton(
-            icon: Icon(
-              Icons.loop,
-              color: Colors.white,
-            ),
-            onPressed: () {
-              map.move(this.centerLocation, 15);
-            },
-          )
-        ],
-      ),
       body: _crearFlutterMap(),
       floatingActionButton: FloatingActionButton(
         child: Icon(
-          Icons.repeat,
+          Icons.my_location,
           color: Colors.white,
         ),
         backgroundColor: Color(0xFFF8B500),
         onPressed: () {
           // streets, dark, light, outdoors, satellite
-          if (tipoMapa == 'streets') {
-            tipoMapa = 'dark';
-          } else if (tipoMapa == 'dark') {
-            tipoMapa = 'light';
-          } else if (tipoMapa == 'light') {
-            tipoMapa = 'outdoors';
-          } else if (tipoMapa == 'outdoors') {
-            tipoMapa = 'satellite';
-          } else {
-            tipoMapa = 'streets';
-          }
+          print(this.centerLocation);
+          map.move(this.centerLocation, 15);
+          loaderService();
         },
       ),
     );
   }
 
-  void _showDialog() {
+  void _showDialog(dynamic data ) {
+    int _id  =  data['id'];
     Dialog simpleDialog = Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12.0),
       ),
-      child: new CalificarAbastecimiento(),
+      child:  CalficacionStart(id:_id),
     );
     showDialog(
         context: context,
@@ -88,7 +77,7 @@ class _MapsState extends State<Maps> {
         });
   }
 
-  Widget _crearFlutterMap() {
+  loaderService() {
     _getLocation().then((value) {
       setState(() {
         userLocation = value;
@@ -97,13 +86,15 @@ class _MapsState extends State<Maps> {
         map.move(this.centerLocation, 15);
       });
     });
+    _crearMarcadores(userLocation);
+  }
+
+  Widget _crearFlutterMap() {
+    //var widgetElement = _crearMarcadores(userLocation);
     return FlutterMap(
       mapController: map,
       options: MapOptions(center: this.centerLocation, zoom: 15),
-      layers: [
-        _crearMapa(),
-        _crearMarcadores(),
-      ],
+      layers: [_crearMapa(), MarkerLayerOptions(markers: _marker)],
     );
   }
 
@@ -119,9 +110,8 @@ class _MapsState extends State<Maps> {
         });
   }
 
-  _crearMarcadores() {
-    final maker = LatLng(4.7323, -74.086);
-    return MarkerLayerOptions(markers: <Marker>[
+  Future _crearMarcadores(Map<String, double> _location) async {
+    _marker = [
       Marker(
         width: 40.0,
         height: 40.0,
@@ -133,31 +123,45 @@ class _MapsState extends State<Maps> {
               color: Colors.white,
             ),
             backgroundColor: Color(0xFFF8B500),
-            onPressed: () {
-              // streets, dark, light, outdoors, satellite
-              print('mi home');
-            },
+            onPressed: () {},
           ),
         ),
       ),
-      Marker(
-        width: 40.0,
-        height: 40.0,
-        point: maker,
-        builder: (context) => Container(
-          child: FloatingActionButton(
-            child: Icon(
-              Icons.store,
-              color: Colors.white,
+    ];
+
+    if (_location != null) {
+      dynamic response = await http.getApi(
+          'store/${_location["latitude"]}/${_location["longitude"]}/5/');
+      var data = json.decode(response.body);
+      print(data[0]);
+      for (var x in data) {
+        final maker = LatLng(x['latitude'], x['longitude']);
+        final _mk = Marker(
+          width: 40.0,
+          height: 40.0,
+          point: maker,
+          builder: (context) => Container(
+            child: FloatingActionButton(
+              child: Icon(
+                Icons.store,
+                color: Colors.white,
+              ),
+              backgroundColor: Colors.green,
+              onPressed: () {
+                print(x);
+                _onButtonInfo(context, x);
+              },
             ),
-            backgroundColor: Colors.green,
-            onPressed: () {
-              _onButtonInfo(context);
-            },
           ),
-        ),
-      )
-    ]);
+        );
+
+        setState(() {
+          _marker.add(_mk);
+        });
+      }
+    }
+
+    //return MarkerLayerOptions(markers: _marker);
   }
 
   Future<Map<String, double>> _getLocation() async {
@@ -178,7 +182,7 @@ class _MapsState extends State<Maps> {
     }
   }
 
-  void _onButtonInfo(BuildContext context) {
+  void _onButtonInfo(BuildContext context, dynamic data) {
     showModalBottomSheet(
         context: context,
         builder: (context) {
@@ -186,7 +190,7 @@ class _MapsState extends State<Maps> {
             color: Color(0xFF737373),
             height: MediaQuery.of(context).size.height * 0.45,
             child: Container(
-              child: this._getModalList(context),
+              child: this._getModalList(context, data),
               decoration: BoxDecoration(
                 color: Theme.of(context).canvasColor,
                 borderRadius: BorderRadius.only(
@@ -199,127 +203,41 @@ class _MapsState extends State<Maps> {
         });
   }
 
-  _getModalList(BuildContext context) {
+  _getModalList(BuildContext context, dynamic data) {
+
     return Column(
       children: <Widget>[
         ListTile(
           leading: Icon(Icons.store),
-          title: Text('Mi tienda'),
+          title: Text(data['name']),
           subtitle: Text(
             '300000',
             style: TextStyle(
               fontSize: 12.0,
             ),
           ),
-          onTap: (){},
+          onTap: () {},
         ),
         ListTile(
           leading: Icon(Icons.info),
           title: Text('Ver informacion completa del negocio'),
-          onTap: () {},
+          onTap: () =>
+              Navigator.pushNamed(context, '/detail', arguments:{"id": data['id']}),
+             
         ),
         ListTile(
           leading: Icon(Icons.shopping_cart),
           title: Text('¿Que tan abastecido esta este negocio?'),
-          onTap: _showDialog,
+          onTap: ()=>_showDialog(data),
         ),
         ListTile(
           leading: Icon(Icons.trending_up),
           title: Text('Denunciar Alza De Precios'),
-          onTap: () {},
+          onTap: () {
+            Navigator.pushNamed(context, '/price',arguments:{"id": data['id']});
+          },
         ),
       ],
     );
   }
-
-/*   void showCustomDialog(BuildContext context) {
-    print('modal');
-    final _screen = MediaQuery.of(context).size;
-
-    Dialog simpleDialog = Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.0),
-      ),
-      child: Container(
-        height: _screen.height * 0.6,
-        width: _screen.width * 0.9,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: <Widget>[
-            Padding(
-              padding: EdgeInsets.all(15.0),
-              child: Text(
-                'Califica el abastecimiento de esta tienda',
-                style: TextStyle(
-                  fontSize: 20.0,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.all(15.0),
-              child: Text(
-                'Nuestra calificación va del 1 al 5 likes, utiliza 5 para reportar que esta tienda esta muy bien abastecida y 1 para una tienda que esta muy poco abastecida',
-                style: TextStyle(
-                  fontSize: 12.0,
-                ),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.all(15.0),
-              child: Container(
-                width: MediaQuery.of(context).size.width * 0.8,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: _list,
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(left: 10, right: 10, top: 50),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: <Widget>[
-                  RaisedButton(
-                    color: Colors.blue,
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    child: Text(
-                      'Okay',
-                      style: TextStyle(fontSize: 18.0, color: Colors.white),
-                    ),
-                  ),
-                  SizedBox(
-                    width: 20,
-                  ),
-                  RaisedButton(
-                    color: Colors.red,
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    child: Text(
-                      'Cancel!',
-                      style: TextStyle(fontSize: 18.0, color: Colors.white),
-                    ),
-                  )
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-    showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return StatefulBuilder(builder: (context, setState) {
-            return simpleDialog;
-          });
-        });
-  }
- */
 }
