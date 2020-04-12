@@ -26,17 +26,18 @@ class _MapsState extends State<Maps> {
   var centerLocation;
   HttpBase http = new HttpBase();
   List<Marker> _marker;
+
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
     loaderService();
-    Timer timer = new Timer(
-        new Duration(seconds: 5),
-        () {
-          loaderService();
-        },
-      );
+    new Timer(
+      new Duration(seconds: 2),
+      () {
+        loaderService();
+      },
+    );
   }
 
   @override
@@ -60,13 +61,13 @@ class _MapsState extends State<Maps> {
     );
   }
 
-  void _showDialog(dynamic data ) {
-    int _id  =  data['id'];
+  void _showDialog(dynamic data) {
+    int _id = data['id'];
     Dialog simpleDialog = Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12.0),
       ),
-      child:  CalficacionStart(id:_id),
+      child: CalficacionStart(id: _id),
     );
     showDialog(
         context: context,
@@ -204,37 +205,36 @@ class _MapsState extends State<Maps> {
   }
 
   _getModalList(BuildContext context, dynamic data) {
-
     return Column(
       children: <Widget>[
         ListTile(
           leading: Icon(Icons.store),
           title: Text(data['name']),
-          subtitle: Text(
+          /* subtitle: Text(
             '300000',
             style: TextStyle(
               fontSize: 12.0,
             ),
-          ),
+          ), */
           onTap: () {},
         ),
         ListTile(
           leading: Icon(Icons.info),
           title: Text('Ver informacion completa del negocio'),
-          onTap: () =>
-              Navigator.pushNamed(context, '/detail', arguments:{"id": data['id']}),
-             
+          onTap: () => Navigator.pushNamed(context, '/detail',
+              arguments: {"id": data['id']}),
         ),
         ListTile(
           leading: Icon(Icons.shopping_cart),
           title: Text('¿Que tan abastecido esta este negocio?'),
-          onTap: ()=>_showDialog(data),
+          onTap: () => _showDialog(data),
         ),
         ListTile(
           leading: Icon(Icons.trending_up),
           title: Text('Denunciar Alza De Precios'),
           onTap: () {
-            Navigator.pushNamed(context, '/price',arguments:{"id": data['id']});
+            Navigator.pushNamed(context, '/price',
+                arguments: {"id": data['id']});
           },
         ),
       ],

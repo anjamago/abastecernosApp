@@ -9,14 +9,19 @@ class PrinceRise extends StatefulWidget {
   _PrinceRiseState createState() => _PrinceRiseState();
 }
 
+
+
+
 class _PrinceRiseState extends State<PrinceRise> {
   HttpBase http = new HttpBase();
   File _image;
   final contentControl = TextEditingController();
-  
+  Map<String,dynamic> listaReporte = {};
+
+
 
   Future capturaImg() async {
-    var image = await ImagePicker.pickImage(source: ImageSource.camera);
+    var image = await ImagePicker.pickImage(source: ImageSource.camera, imageQuality: 50);
     setState(() {
       this._image = image;
     });
@@ -32,7 +37,7 @@ class _PrinceRiseState extends State<PrinceRise> {
   @override
   Widget build(BuildContext context) {
     Map<String, dynamic> data = ModalRoute.of(context).settings.arguments;
-    print(data);
+    
     final _screen = MediaQuery.of(context).size;
     return Scaffold(
       appBar: AppBar(
@@ -103,14 +108,20 @@ class _PrinceRiseState extends State<PrinceRise> {
                   alignedDropdown: true,
                   child: RaisedButton(
                     color: Color(0xFFF8B500),
-                    onPressed: (){
+                    onPressed: () {
                       final json = {
-                          "store_id": data['id'],
-                          "description": contentControl.value,
-                          "photo":_image
-                        };
-                      http.postApi('/report/store/', data).then((res)=>res.body).whenComplete((){
-                         Navigator.pop(context);
+                        "store_id": data['id'],
+                        "description": contentControl.text,
+                        "photo": _image
+                      };
+                       print(json);
+                      http.postFile('report/store/', json).then((res) {
+                        print('respestaa');
+                        print(res.body);
+                        print(res.statusCode);
+                      }).catchError((err)=>print(err))
+                      .whenComplete(() {
+                        Navigator.pop(context);
                       });
                     },
                     child: Text(
